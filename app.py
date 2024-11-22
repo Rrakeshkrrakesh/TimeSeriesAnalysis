@@ -2,14 +2,13 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 # Function to check stationarity
-def check_stationarity(timeseries):
-    result = adfuller(timeseries)
+def check_stationarity(series):
+    result = adfuller(series)
     st.write('ADF Statistic:', result[0])
     st.write('p-value:', result[1])
     st.write('Critical Values:')
@@ -28,11 +27,8 @@ st.title('BSE Sensex Time Series Analysis')
 symbol = "^BSESN"  # BSE Sensex symbol
 data = yf.download(symbol, start="2010-01-01", end="2023-01-01")
 
-# Save the data to a CSV file for future use
-data.to_csv("bse_sensex.csv")
-
-# Load the data
-data = pd.read_csv("bse_sensex.csv", index_col="Date", parse_dates=True)
+# Ensure the index is in date format
+data.index = pd.to_datetime(data.index)
 
 # Check for missing values
 st.write("Missing Values:")
@@ -47,12 +43,7 @@ st.write(data.head())
 
 # Plot the closing prices
 st.write("Closing Prices:")
-fig, ax = plt.subplots(figsize=(14, 7))
-ax.plot(data['Close'])
-ax.set_title('BSE Sensex Closing Prices')
-ax.set_xlabel('Date')
-ax.set_ylabel('Closing Price')
-st.pyplot(fig)
+st.line_chart(data['Close'])
 
 # Plot the distribution of closing prices
 st.write("Distribution of Closing Prices:")
@@ -90,12 +81,13 @@ st.write(model_fit.summary())
 # Forecast the next 30 days
 forecast = model_fit.get_forecast(steps=30)
 forecast_index = pd.date_range(data.index[-1], periods=30, freq='D')
+forecast_values = forecast.predicted_mean
 
 # Plot the forecast
 st.write("Forecast:")
 fig, ax = plt.subplots(figsize=(14, 7))
 ax.plot(data['Close'], label='Historical')
-ax.plot(forecast_index, forecast.predicted_mean, label='Forecast')
+ax.plot(forecast_index, forecast_values, label='Forecast')
 ax.fill_between(forecast_index, forecast.conf_int()['lower Close'], forecast.conf_int()['upper Close'], alpha=0.2)
 ax.set_title('BSE Sensex Closing Prices Forecast')
 ax.set_xlabel('Date')
@@ -104,8 +96,8 @@ ax.legend()
 st.pyplot(fig)
 
 # Calculate MAE and RMSE
-mae = mean_absolute_error(data['Close'][-30:], forecast.predicted_mean)
-rmse = mean_squared_error(data['Close'][-30:], forecast.predicted_mean, squared=False)
+mae = mean_absolute_error(data['Close'][-30:], forecast_values)
+rmse = mean_squared_error(data['Close'][-30:], forecast_values, squared=False)
 
 st.write(f'MAE: {mae}')
 st.write(f'RMSE: {rmse}')
