@@ -1,5 +1,6 @@
 import streamlit as st
 import yfinance as yf
+import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import adfuller
